@@ -1,8 +1,10 @@
 const mongoose = require('mongoose');
-const dns = require('dns');
 
-// El DNS del router no resuelve registros SRV de Atlas — usar Google DNS
-dns.setServers(['8.8.8.8', '8.8.4.4']);
+// El DNS del router local no resuelve SRV de Atlas — solo aplicar en desarrollo
+if (process.env.NODE_ENV !== 'production') {
+  const dns = require('dns');
+  dns.setServers(['8.8.8.8', '8.8.4.4']);
+}
 
 const connectDB = async () => {
   try {
