@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Search, Plus, Minus, Trash2, ShoppingCart, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Plus, Minus, ShoppingCart, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { salesAPI, productsAPI, authAPI } from '../services/api';
 import useIsMobile from '../hooks/useIsMobile';
 import toast from 'react-hot-toast';
@@ -278,7 +278,7 @@ function CobroRapidoModal({ onClose }) {
 }
 
 // ── POS / Caja ─────────────────────────────────────────────────────────────
-function Caja({ onSaleCreated, isMobile }) {
+function Caja({ onSaleCreated, isMobile, onCobrar }) {
   const [search, setSearch]         = useState('');
   const [products, setProducts]     = useState([]);
   const [cart, setCart]             = useState([]);
@@ -287,7 +287,6 @@ function Caja({ onSaleCreated, isMobile }) {
   const [montoPagado, setMontoPagado] = useState('');
   const [cliente, setCliente]       = useState(null);
   const [saving, setSaving]         = useState(false);
-  const [showCobro, setShowCobro]   = useState(false);
 
   const buscar = useCallback(async (q) => {
     if (!q.trim()) { setProducts([]); return; }
@@ -362,7 +361,6 @@ function Caja({ onSaleCreated, isMobile }) {
   };
 
   return (
-    <>
     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 320px', gap: '1rem', alignItems: 'start' }}>
 
       {/* Columna izquierda: buscador + carrito */}
@@ -539,7 +537,7 @@ function Caja({ onSaleCreated, isMobile }) {
 
         {/* Separador */}
         <div style={{ borderTop: '1px solid #2e2b27', paddingTop: '0.75rem' }}>
-          <button onClick={() => setShowCobro(true)} style={{
+          <button onClick={onCobrar} style={{
             width: '100%', background: 'transparent',
             border: '1px solid #e85d3a50', borderRadius: 12, padding: '0.75rem',
             color: '#e85d3a', fontWeight: 600, fontSize: '0.9rem',
@@ -556,8 +554,6 @@ function Caja({ onSaleCreated, isMobile }) {
       </div>
     </div>
 
-    {showCobro && <CobroRapidoModal onClose={() => setShowCobro(false)} />}
-    </>
   );
 }
 
@@ -810,8 +806,9 @@ function Creditos() {
 
 // ── Página principal ───────────────────────────────────────────────────────
 export default function SalesPage() {
-  const [tab, setTab] = useState('caja');
+  const [tab, setTab]           = useState('caja');
   const [historialKey, setHistorialKey] = useState(0);
+  const [showCobro, setShowCobro] = useState(false);
   const isMobile = useIsMobile();
 
   const onSaleCreated = () => {
@@ -845,9 +842,11 @@ export default function SalesPage() {
         {tabBtn('creditos', '📒 Créditos')}
       </div>
 
-      {tab === 'caja' && <Caja onSaleCreated={onSaleCreated} isMobile={isMobile} />}
+      {tab === 'caja' && <Caja onSaleCreated={onSaleCreated} isMobile={isMobile} onCobrar={() => setShowCobro(true)} />}
       {tab === 'historial' && <Historial key={historialKey} />}
       {tab === 'creditos' && <Creditos />}
+
+      {showCobro && <CobroRapidoModal onClose={() => setShowCobro(false)} />}
     </div>
   );
 }
