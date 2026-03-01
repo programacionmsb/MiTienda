@@ -3,7 +3,7 @@ const Product = require('../models/Product');
 // GET /api/products
 exports.getProducts = async (req, res, next) => {
   try {
-    const { categoria, search, stockBajo, page = 1, limit = 50, activo = true } = req.query;
+    const { categoria, search, stockBajo, page = 1, limit = 50, activo = 'true' } = req.query;
     const filter = { activo: activo === 'true' };
     if (categoria) filter.categoria = categoria;
     if (stockBajo === 'true') filter.$expr = { $lte: ['$stock', '$stockMinimo'] };
