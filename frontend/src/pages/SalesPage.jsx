@@ -114,6 +114,169 @@ function ClienteSelector({ value, onChange }) {
   );
 }
 
+// ── Modal cobro rápido de deuda ─────────────────────────────────────────────
+function CobroRapidoModal({ onClose }) {
+  const [deudores, setDeudores] = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [search, setSearch]     = useState('');
+  const [selected, setSelected] = useState(null);
+  const [monto, setMonto]       = useState('');
+  const [saving, setSaving]     = useState(false);
+
+  useEffect(() => {
+    salesAPI.getDeudores()
+      .then(r => setDeudores(r.data.data || []))
+      .catch(() => toast.error('Error cargando deudores'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered = deudores.filter(d =>
+    !search.trim() ||
+    d.nombre.toLowerCase().includes(search.toLowerCase()) ||
+    (d.telefono || '').includes(search)
+  );
+
+  const handleCobro = async () => {
+    const m = parseFloat(monto);
+    if (!m || m <= 0) { toast.error('Ingresá un monto válido'); return; }
+    if (m > selected.deuda) { toast.error(`El monto supera la deuda (${S(selected.deuda)})`); return; }
+    setSaving(true);
+    try {
+      await salesAPI.cobro({ clienteId: selected._id, monto: m });
+      toast.success(`Cobro registrado — ${selected.nombre} pagó ${S(m)}`);
+      onClose();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Error al registrar cobro');
+    } finally { setSaving(false); }
+  };
+
+  const deudaRestante = selected && monto ? Math.max(0, selected.deuda - parseFloat(monto || 0)) : null;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+      <div style={{ background: '#1a1916', border: '1px solid #2e2b27', borderRadius: 20, width: '100%', maxWidth: 460, maxHeight: '90vh', overflowY: 'auto', padding: '1.5rem' }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+          <h3 style={{ fontFamily: "'Syne', sans-serif", margin: 0, fontSize: '1.1rem' }}>📒 Cobrar deuda</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8a8680' }}><X size={20} /></button>
+        </div>
+
+        {loading ? (
+          <div style={{ padding: '2rem', textAlign: 'center', color: '#8a8680' }}>Cargando...</div>
+        ) : deudores.length === 0 ? (
+          <div style={{ padding: '2rem', textAlign: 'center', color: '#8a8680' }}>
+            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✅</div>
+            No hay deudas pendientes
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+            {/* Buscador */}
+            {!selected && (
+              <div style={{ position: 'relative' }}>
+                <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#8a8680' }} />
+                <input autoFocus value={search} onChange={e => setSearch(e.target.value)}
+                  placeholder="Buscar por nombre o teléfono..."
+                  style={{ ...input, paddingLeft: '2rem' }} />
+              </div>
+            )}
+
+            {/* Lista de deudores */}
+            {!selected && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: 240, overflowY: 'auto' }}>
+                {filtered.length === 0 ? (
+                  <div style={{ textAlign: 'center', color: '#8a8680', padding: '1rem', fontSize: '0.85rem' }}>Sin resultados</div>
+                ) : filtered.map(d => (
+                  <div key={d._id} onClick={() => { setSelected(d); setMonto(''); }}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', background: '#211f1c', borderRadius: 10, cursor: 'pointer', border: '1px solid transparent', transition: 'border-color 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = '#f5a62340'}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.92rem' }}>{d.nombre}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#8a8680', marginTop: '0.1rem' }}>{d.telefono || d.email || '—'}</div>
+                    </div>
+                    <div style={{ color: '#e85d3a', fontWeight: 700, fontFamily: "'Syne', sans-serif", fontSize: '1.05rem' }}>
+                      {S(d.deuda)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Cliente seleccionado */}
+            {selected && (
+              <>
+                <div style={{ background: '#211f1c', border: '1px solid #f5a62340', borderRadius: 12, padding: '0.85rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{selected.nombre}</div>
+                    <div style={{ fontSize: '0.78rem', color: '#e85d3a', marginTop: '0.2rem', fontWeight: 600 }}>
+                      Deuda pendiente: {S(selected.deuda)}
+                    </div>
+                  </div>
+                  <button onClick={() => { setSelected(null); setMonto(''); }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8a8680' }}><X size={15} /></button>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', color: '#8a8680', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Monto a cobrar (S/)</label>
+                  <input autoFocus type="number" min="0.01" step="0.10" max={selected.deuda}
+                    value={monto} onChange={e => setMonto(e.target.value)}
+                    placeholder={`Máx. ${S(selected.deuda)}`}
+                    style={input} />
+                  {/* Botones rápidos */}
+                  <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem' }}>
+                    {[
+                      { label: `Total (${S(selected.deuda)})`, value: selected.deuda.toFixed(2) },
+                      { label: `50% (${S(selected.deuda / 2)})`, value: (selected.deuda / 2).toFixed(2) },
+                    ].map(({ label, value }) => (
+                      <button key={label} onClick={() => setMonto(value)}
+                        style={{ background: '#211f1c', border: '1px solid #2e2b27', borderRadius: 7, padding: '0.28rem 0.7rem', cursor: 'pointer', color: '#8a8680', fontSize: '0.75rem', fontFamily: "'DM Sans', sans-serif' " }}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Resumen */}
+                {monto && parseFloat(monto) > 0 && (
+                  <div style={{ background: '#3ecf8e10', border: '1px solid #3ecf8e30', borderRadius: 10, padding: '0.75rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.88rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#8a8680' }}>Pago recibido</span>
+                      <span style={{ color: '#3ecf8e', fontWeight: 700 }}>{S(parseFloat(monto))}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#8a8680' }}>Deuda restante</span>
+                      <span style={{ color: deudaRestante === 0 ? '#3ecf8e' : '#e85d3a', fontWeight: 700 }}>
+                        {deudaRestante === 0 ? '✓ Saldada' : S(deudaRestante)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Botones */}
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
+              <button onClick={onClose}
+                style={{ flex: 1, background: '#211f1c', border: '1px solid #2e2b27', borderRadius: 10, padding: '0.75rem', color: '#8a8680', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                Cancelar
+              </button>
+              {selected && (
+                <button onClick={handleCobro} disabled={saving || !monto || parseFloat(monto) <= 0}
+                  style={{ flex: 2, background: '#3ecf8e', border: 'none', borderRadius: 10, padding: '0.75rem', color: '#0f0e0c', fontWeight: 700, cursor: (saving || !monto) ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: (saving || !monto) ? 0.6 : 1 }}>
+                  {saving ? 'Registrando...' : 'Confirmar cobro'}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── POS / Caja ─────────────────────────────────────────────────────────────
 function Caja({ onSaleCreated, isMobile }) {
   const [search, setSearch]         = useState('');
@@ -124,6 +287,7 @@ function Caja({ onSaleCreated, isMobile }) {
   const [montoPagado, setMontoPagado] = useState('');
   const [cliente, setCliente]       = useState(null);
   const [saving, setSaving]         = useState(false);
+  const [showCobro, setShowCobro]   = useState(false);
 
   const buscar = useCallback(async (q) => {
     if (!q.trim()) { setProducts([]); return; }
@@ -371,8 +535,27 @@ function Caja({ onSaleCreated, isMobile }) {
         }}>
           {saving ? 'Registrando...' : `Cobrar ${S(total)}`}
         </button>
+
+        {/* Separador */}
+        <div style={{ borderTop: '1px solid #2e2b27', paddingTop: '0.75rem' }}>
+          <button onClick={() => setShowCobro(true)} style={{
+            width: '100%', background: 'transparent',
+            border: '1px solid #e85d3a50', borderRadius: 12, padding: '0.75rem',
+            color: '#e85d3a', fontWeight: 600, fontSize: '0.9rem',
+            cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+            transition: 'background 0.15s',
+          }}
+            onMouseEnter={e => e.currentTarget.style.background = '#e85d3a15'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+          >
+            📒 Cobrar deuda de cliente
+          </button>
+        </div>
       </div>
     </div>
+
+    {showCobro && <CobroRapidoModal onClose={() => setShowCobro(false)} />}
   );
 }
 
