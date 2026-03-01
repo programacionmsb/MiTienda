@@ -85,14 +85,17 @@ router.patch('/:id/estado', protect, authorize('admin', 'empleado'), async (req,
     order.atendidoPor = req.user._id;
     order.historialEstados.push({ estado, usuario: req.user._id });
 
-    // Si se entrega, descontar stock
+    // Si se entrega, descontar stock y actualizar cliente
     if (estado === 'entregado') {
       for (const item of order.items) {
         await Product.findByIdAndUpdate(item.producto, { $inc: { stock: -item.cantidad } });
       }
       if (order.cliente) {
         const puntos = Math.floor(order.total);
-        await User.findByIdAndUpdate(order.cliente, { $inc: { puntos, totalCompras: order.total } });
+        const clientUpdate = { $inc: { puntos, totalCompras: order.total } };
+        // Si el pedido es a crédito, registrar deuda al entregar
+        if (order.metodoPago === 'credito') clientUpdate.$inc.deuda = order.total;
+        await User.findByIdAndUpdate(order.cliente, clientUpdate);
         order.puntosOtorgados = puntos;
       }
     }

@@ -7,8 +7,8 @@ import useIsMobile from '../hooks/useIsMobile';
 import toast from 'react-hot-toast';
 
 const CATEGORIAS = ['bebidas', 'golosinas', 'abarrotes', 'panaderia', 'limpieza', 'otros'];
-const METODOS    = ['efectivo', 'yape', 'plin', 'transferencia', 'tarjeta'];
-const METODO_EMOJI = { efectivo: '💵', yape: '📲', plin: '📲', transferencia: '🏦', tarjeta: '💳' };
+const METODOS_BASE = ['efectivo', 'yape', 'plin', 'transferencia', 'tarjeta'];
+const METODO_EMOJI = { efectivo: '💵', yape: '📲', plin: '📲', transferencia: '🏦', tarjeta: '💳', credito: '📒' };
 const S = (v) => `S/ ${(v || 0).toFixed(2)}`;
 
 const inputStyle = {
@@ -93,6 +93,9 @@ function CartDrawer({ cart, onClose, onUpdateQty, onRemove, onOrderPlaced }) {
     metodoPago:    'efectivo',
     notas:         '',
   });
+
+  // Métodos disponibles: crédito solo para usuarios logueados
+  const METODOS = token ? [...METODOS_BASE, 'credito'] : METODOS_BASE;
 
   const total = cart.reduce((s, i) => s + i.precio * i.cantidad, 0);
   const set   = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -248,15 +251,28 @@ function CartDrawer({ cart, onClose, onUpdateQty, onRemove, onOrderPlaced }) {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                   {METODOS.map(m => (
                     <button key={m} type="button" onClick={() => set('metodoPago', m)} style={{
-                      background: form.metodoPago === m ? '#f5a623' : '#211f1c',
-                      border: `1px solid ${form.metodoPago === m ? '#f5a623' : '#2e2b27'}`,
+                      background: form.metodoPago === m ? (m === 'credito' ? '#e85d3a' : '#f5a623') : '#211f1c',
+                      border: `1px solid ${form.metodoPago === m ? (m === 'credito' ? '#e85d3a' : '#f5a623') : '#2e2b27'}`,
                       borderRadius: 8, padding: '0.35rem 0.65rem', cursor: 'pointer',
-                      color: form.metodoPago === m ? '#0f0e0c' : '#8a8680',
+                      color: form.metodoPago === m ? '#fff' : '#8a8680',
                       fontFamily: "'DM Sans', sans-serif", fontSize: '0.8rem',
                       fontWeight: form.metodoPago === m ? 700 : 400,
                     }}>{METODO_EMOJI[m]} {m}</button>
                   ))}
                 </div>
+
+                {/* Nota informativa de crédito */}
+                {form.metodoPago === 'credito' && (
+                  <div style={{ marginTop: '0.6rem', background: '#e85d3a15', border: '1px solid #e85d3a40', borderRadius: 10, padding: '0.7rem 0.9rem', fontSize: '0.8rem', color: '#e85d3a', lineHeight: 1.5 }}>
+                    📒 <strong>Pago a crédito (fiado)</strong><br />
+                    El monto se registrará como deuda en tu cuenta al momento de recibir el pedido.
+                    {user?.deuda > 0 && (
+                      <span style={{ display: 'block', marginTop: '0.3rem', color: '#e85d3a', fontWeight: 700 }}>
+                        Deuda actual: S/ {(user.deuda).toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
