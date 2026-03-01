@@ -431,6 +431,18 @@ export default function StorePage() {
                 {(user.rol === 'admin' || user.rol === 'empleado') && !isMobile && (
                   <Link to="/dashboard" style={{ color: '#8a8680', textDecoration: 'none', fontSize: '0.82rem', padding: '0.4rem 0.75rem', border: '1px solid #2e2b27', borderRadius: 8 }}>Panel</Link>
                 )}
+                {/* Deuda del cliente */}
+                {user.rol === 'cliente' && user.deuda > 0 && (
+                  <div style={{ background: '#e85d3a20', border: '1px solid #e85d3a50', borderRadius: 8, padding: '0.3rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: isMobile ? '0.72rem' : '0.8rem', color: '#e85d3a', fontWeight: 700 }}>
+                    📒 {isMobile ? `S/ ${user.deuda.toFixed(2)}` : `Debes S/ ${user.deuda.toFixed(2)}`}
+                  </div>
+                )}
+                {/* Puntos del cliente */}
+                {user.rol === 'cliente' && !isMobile && (
+                  <div style={{ background: '#f5a62315', border: '1px solid #f5a62330', borderRadius: 8, padding: '0.3rem 0.6rem', fontSize: '0.8rem', color: '#f5a623', fontWeight: 600 }}>
+                    ⭐ {user.puntos || 0} pts
+                  </div>
+                )}
                 <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#f5a623', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 700, color: '#0f0e0c' }}>
                   {user.nombre?.[0]?.toUpperCase()}
                 </div>
@@ -464,6 +476,19 @@ export default function StorePage() {
       </header>
 
       <main style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '1rem' : '2rem' }}>
+
+        {/* Banner deuda del cliente */}
+        {user?.rol === 'cliente' && user.deuda > 0 && (
+          <div style={{ background: '#e85d3a15', border: '1px solid #e85d3a40', borderRadius: 12, padding: '0.8rem 1rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}>
+              <span style={{ fontSize: '1.1rem' }}>📒</span>
+              <div>
+                <span style={{ color: '#e85d3a', fontWeight: 700 }}>Tienes una deuda pendiente de S/ {user.deuda.toFixed(2)}</span>
+                <span style={{ color: '#8a8680', marginLeft: '0.4rem', fontSize: '0.8rem' }}>— acércate a la tienda o comunícate para regularizarla</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Filtros categoría */}
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
