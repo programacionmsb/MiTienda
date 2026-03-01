@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Search, Plus, Minus, Trash2, ShoppingCart, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { salesAPI, productsAPI } from '../services/api';
+import { salesAPI, productsAPI, authAPI } from '../services/api';
 import toast from 'react-hot-toast';
 
-const METODOS = ['efectivo', 'yape', 'plin', 'transferencia', 'tarjeta'];
-const METODO_EMOJI = { efectivo: '💵', yape: '📲', plin: '📲', transferencia: '🏦', tarjeta: '💳' };
+const METODOS = ['efectivo', 'yape', 'plin', 'transferencia', 'tarjeta', 'credito'];
+const METODO_EMOJI = { efectivo: '💵', yape: '📲', plin: '📲', transferencia: '🏦', tarjeta: '💳', credito: '📒' };
 
 const S = (v) => `S/ ${(v || 0).toFixed(2)}`;
 
@@ -45,6 +45,74 @@ function ResumenDia() {
   );
 }
 
+// ── Buscador de clientes ────────────────────────────────────────────────────
+function ClienteSelector({ value, onChange }) {
+  const [q, setQ]           = useState('');
+  const [opciones, setOpciones] = useState([]);
+  const [open, setOpen]     = useState(false);
+
+  useEffect(() => {
+    if (!q.trim()) { setOpciones([]); return; }
+    const t = setTimeout(async () => {
+      try {
+        const res = await authAPI.getUsers({ search: q, rol: 'cliente', limit: 6 });
+        setOpciones(res.data.data || []);
+        setOpen(true);
+      } catch {}
+    }, 300);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  const select = (c) => {
+    onChange(c);
+    setQ(c.nombre);
+    setOpen(false);
+    setOpciones([]);
+  };
+
+  const clear = () => { onChange(null); setQ(''); };
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <div style={{ position: 'relative' }}>
+        <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#8a8680' }} />
+        <input
+          value={q} onChange={e => { setQ(e.target.value); if (!e.target.value) onChange(null); }}
+          placeholder="Buscar cliente por nombre o email..."
+          style={{ ...input, paddingLeft: '2rem', paddingRight: value ? '2rem' : undefined,
+            borderColor: value ? '#f5a623' : '#2e2b27' }}
+        />
+        {value && (
+          <button onClick={clear} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#8a8680' }}>
+            <X size={13} />
+          </button>
+        )}
+      </div>
+      {value && (
+        <div style={{ marginTop: 6, padding: '0.5rem 0.75rem', background: '#1a1916', border: '1px solid #f5a623', borderRadius: 8, fontSize: '0.82rem', color: '#f5a623' }}>
+          {value.nombre} · {value.email}
+          {value.deuda > 0 && <span style={{ marginLeft: 8, color: '#e85d3a' }}>Deuda: S/ {value.deuda.toFixed(2)}</span>}
+        </div>
+      )}
+      {open && opciones.length > 0 && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: '#1a1916', border: '1px solid #2e2b27', borderRadius: 10, marginTop: 4, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+          {opciones.map(c => (
+            <div key={c._id} onClick={() => select(c)}
+              style={{ padding: '0.6rem 1rem', cursor: 'pointer', fontSize: '0.88rem' }}
+              onMouseEnter={e => e.currentTarget.style.background = '#211f1c'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <span style={{ color: '#f0ede8' }}>{c.nombre}</span>
+              <span style={{ color: '#8a8680', marginLeft: 8 }}>{c.email}</span>
+              {c.deuda > 0 && <span style={{ marginLeft: 8, color: '#e85d3a', fontSize: '0.78rem' }}>Debe S/ {c.deuda.toFixed(2)}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── POS / Caja ─────────────────────────────────────────────────────────────
 function Caja({ onSaleCreated }) {
   const [search, setSearch]         = useState('');
@@ -53,6 +121,7 @@ function Caja({ onSaleCreated }) {
   const [descuento, setDescuento]   = useState('');
   const [metodo, setMetodo]         = useState('efectivo');
   const [montoPagado, setMontoPagado] = useState('');
+  const [cliente, setCliente]       = useState(null);
   const [saving, setSaving]         = useState(false);
 
   const buscar = useCallback(async (q) => {
@@ -100,19 +169,25 @@ function Caja({ onSaleCreated }) {
     if (metodo === 'efectivo' && montoPagado && parseFloat(montoPagado) < total) {
       toast.error('El monto pagado es menor al total'); return;
     }
+    if (metodo === 'credito' && !cliente) {
+      toast.error('Seleccioná un cliente para vender a crédito');
+      return;
+    }
     setSaving(true);
     try {
       await salesAPI.create({
         items: cart.map(i => ({ productoId: i._id, cantidad: i.cantidad })),
         metodoPago: metodo,
-        montoPagado: montoPagado ? parseFloat(montoPagado) : total,
+        montoPagado: metodo === 'credito' ? 0 : (montoPagado ? parseFloat(montoPagado) : total),
         descuento: desc,
+        clienteId: cliente?._id,
       });
-      toast.success('¡Venta registrada!');
+      toast.success(metodo === 'credito' ? `Venta a crédito registrada — ${cliente.nombre} debe S/ ${total.toFixed(2)}` : '¡Venta registrada!');
       setCart([]);
       setDescuento('');
       setMontoPagado('');
       setMetodo('efectivo');
+      setCliente(null);
       onSaleCreated();
     } catch (err) {
       toast.error(err.response?.data?.error || 'Error al registrar venta');
@@ -254,6 +329,16 @@ function Caja({ onSaleCreated }) {
             ))}
           </div>
         </div>
+
+        {/* Cliente (requerido para crédito, opcional para otros) */}
+        {metodo === 'credito' && (
+          <div>
+            <label style={{ display: 'block', fontSize: '0.78rem', color: '#e85d3a', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>
+              Cliente * (requerido)
+            </label>
+            <ClienteSelector value={cliente} onChange={setCliente} />
+          </div>
+        )}
 
         {/* Monto pagado (efectivo) */}
         {metodo === 'efectivo' && (
@@ -416,6 +501,127 @@ function Historial() {
   );
 }
 
+// ── Créditos / Deudores ─────────────────────────────────────────────────────
+function Creditos() {
+  const [deudores, setDeudores] = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [cobro, setCobro]       = useState({ clienteId: null, nombre: '', monto: '' });
+  const [saving, setSaving]     = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await salesAPI.getDeudores();
+      setDeudores(res.data.data);
+    } catch { toast.error('Error cargando deudores'); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const abrirCobro = (d) => setCobro({ clienteId: d._id, nombre: d.nombre, monto: '' });
+
+  const handleCobro = async () => {
+    if (!cobro.monto || parseFloat(cobro.monto) <= 0) { toast.error('Ingresá un monto válido'); return; }
+    setSaving(true);
+    try {
+      await salesAPI.cobro({ clienteId: cobro.clienteId, monto: parseFloat(cobro.monto) });
+      toast.success(`Pago registrado — ${cobro.nombre}`);
+      setCobro({ clienteId: null, nombre: '', monto: '' });
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Error al registrar cobro');
+    } finally { setSaving(false); }
+  };
+
+  const S = (v) => `S/ ${(v || 0).toFixed(2)}`;
+  const totalDeuda = deudores.reduce((s, d) => s + d.deuda, 0);
+
+  return (
+    <div>
+      {/* Resumen */}
+      {!loading && deudores.length > 0 && (
+        <div style={{ background: '#1a1916', border: '1px solid #e85d3a33', borderRadius: 14, padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ color: '#8a8680', fontSize: '0.9rem' }}>{deudores.length} cliente{deudores.length !== 1 ? 's' : ''} con deuda pendiente</span>
+          <span style={{ color: '#e85d3a', fontFamily: "'Syne', sans-serif", fontSize: '1.3rem', fontWeight: 700 }}>{S(totalDeuda)}</span>
+        </div>
+      )}
+
+      {/* Modal cobro */}
+      {cobro.clienteId && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#1a1916', border: '1px solid #2e2b27', borderRadius: 20, padding: '2rem', width: '100%', maxWidth: 380 }}>
+            <h3 style={{ fontFamily: "'Syne', sans-serif", margin: '0 0 1.25rem', fontSize: '1.1rem' }}>
+              Registrar cobro — {cobro.nombre}
+            </h3>
+            <label style={{ display: 'block', fontSize: '0.82rem', color: '#8a8680', marginBottom: '0.4rem' }}>Monto a cobrar (S/)</label>
+            <input
+              type="number" min="0.01" step="0.10"
+              value={cobro.monto} onChange={e => setCobro(c => ({ ...c, monto: e.target.value }))}
+              placeholder="0.00" autoFocus
+              style={{ width: '100%', background: '#211f1c', border: '1px solid #2e2b27', borderRadius: 10, padding: '0.75rem 1rem', color: '#f0ede8', fontFamily: "'DM Sans', sans-serif", fontSize: '1rem', outline: 'none', boxSizing: 'border-box' }}
+            />
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem' }}>
+              <button onClick={() => setCobro({ clienteId: null, nombre: '', monto: '' })}
+                style={{ flex: 1, background: '#211f1c', border: '1px solid #2e2b27', borderRadius: 10, padding: '0.75rem', color: '#f0ede8', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                Cancelar
+              </button>
+              <button onClick={handleCobro} disabled={saving}
+                style={{ flex: 1, background: '#3ecf8e', border: 'none', borderRadius: 10, padding: '0.75rem', color: '#0f0e0c', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: saving ? 0.7 : 1 }}>
+                {saving ? 'Guardando...' : 'Confirmar cobro'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tabla */}
+      <div style={{ background: '#1a1916', border: '1px solid #2e2b27', borderRadius: 16, overflow: 'hidden' }}>
+        {loading ? (
+          <div style={{ padding: '3rem', textAlign: 'center', color: '#8a8680' }}>Cargando...</div>
+        ) : deudores.length === 0 ? (
+          <div style={{ padding: '3rem', textAlign: 'center', color: '#8a8680' }}>
+            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✅</div>
+            No hay deudas pendientes
+          </div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #2e2b27' }}>
+                {['Cliente', 'Email', 'Teléfono', 'Deuda', ''].map(h => (
+                  <th key={h} style={{ padding: '0.85rem 1rem', textAlign: 'left', fontSize: '0.73rem', color: '#8a8680', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {deudores.map(d => (
+                <tr key={d._id} style={{ borderBottom: '1px solid #2e2b27' }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#211f1c'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <td style={{ padding: '0.8rem 1rem', fontWeight: 600 }}>{d.nombre}</td>
+                  <td style={{ padding: '0.8rem 1rem', color: '#8a8680', fontSize: '0.85rem' }}>{d.email}</td>
+                  <td style={{ padding: '0.8rem 1rem', color: '#8a8680', fontSize: '0.85rem' }}>{d.telefono || '—'}</td>
+                  <td style={{ padding: '0.8rem 1rem', color: '#e85d3a', fontWeight: 700, fontFamily: "'Syne', sans-serif" }}>{S(d.deuda)}</td>
+                  <td style={{ padding: '0.8rem 1rem' }}>
+                    <button onClick={() => abrirCobro(d)} style={{
+                      background: '#3ecf8e22', border: '1px solid #3ecf8e55', borderRadius: 8,
+                      padding: '0.35rem 0.85rem', color: '#3ecf8e', cursor: 'pointer',
+                      fontFamily: "'DM Sans', sans-serif", fontSize: '0.82rem', fontWeight: 600,
+                    }}>
+                      Cobrar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Página principal ───────────────────────────────────────────────────────
 export default function SalesPage() {
   const [tab, setTab] = useState('caja');
@@ -449,12 +655,12 @@ export default function SalesPage() {
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
         {tabBtn('caja', '🧾 Nueva venta')}
         {tabBtn('historial', '📋 Historial')}
+        {tabBtn('creditos', '📒 Créditos')}
       </div>
 
-      {tab === 'caja'
-        ? <Caja onSaleCreated={onSaleCreated} />
-        : <Historial key={historialKey} />
-      }
+      {tab === 'caja' && <Caja onSaleCreated={onSaleCreated} />}
+      {tab === 'historial' && <Historial key={historialKey} />}
+      {tab === 'creditos' && <Creditos />}
     </div>
   );
 }

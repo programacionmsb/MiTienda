@@ -31,6 +31,12 @@ exports.createSale = async (req, res, next) => {
     }
 
     const total = subtotal - descuento;
+
+    // Validar crédito: requiere cliente registrado
+    if (metodoPago === 'credito' && !clienteId) {
+      return res.status(400).json({ error: 'El pago a crédito requiere seleccionar un cliente' });
+    }
+
     const puntos = Math.floor(total);   // 1 punto por cada sol
 
     const sale = await Sale.create({
@@ -39,17 +45,18 @@ exports.createSale = async (req, res, next) => {
       descuento,
       total,
       metodoPago,
-      montoPagado,
+      montoPagado: metodoPago === 'credito' ? 0 : montoPagado,
       cajero: req.user._id,
       cliente: clienteId || null,
       puntosOtorgados: puntos,
     });
 
-    // Sumar puntos al cliente si está registrado
+    // Actualizar cliente
     if (clienteId) {
-      await User.findByIdAndUpdate(clienteId, {
-        $inc: { puntos, totalCompras: total }
-      });
+      const update = { $inc: { puntos, totalCompras: total } };
+      // Si es crédito, sumar deuda
+      if (metodoPago === 'credito') update.$inc.deuda = total;
+      await User.findByIdAndUpdate(clienteId, update);
     }
 
     await sale.populate('cajero', 'nombre');
@@ -80,6 +87,37 @@ exports.getSales = async (req, res, next) => {
     const totalVendido = sales.reduce((sum, s) => sum + s.total, 0);
 
     res.json({ success: true, data: sales, total, totalVendido });
+  } catch (error) { next(error); }
+};
+
+// POST /api/sales/cobro  — Registrar pago de deuda de un cliente
+exports.registrarCobro = async (req, res, next) => {
+  try {
+    const { clienteId, monto } = req.body;
+    if (!clienteId || !monto || monto <= 0) {
+      return res.status(400).json({ error: 'clienteId y monto son requeridos' });
+    }
+    const cliente = await User.findById(clienteId);
+    if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
+    if (monto > cliente.deuda) {
+      return res.status(400).json({ error: `El monto (S/ ${monto}) supera la deuda actual (S/ ${cliente.deuda.toFixed(2)})` });
+    }
+    const updated = await User.findByIdAndUpdate(
+      clienteId,
+      { $inc: { deuda: -monto } },
+      { new: true }
+    );
+    res.json({ success: true, data: updated });
+  } catch (error) { next(error); }
+};
+
+// GET /api/sales/deudores  — Clientes con deuda pendiente
+exports.getDeudores = async (req, res, next) => {
+  try {
+    const deudores = await User.find({ deuda: { $gt: 0 }, rol: 'cliente' })
+      .select('nombre email telefono deuda')
+      .sort({ deuda: -1 });
+    res.json({ success: true, data: deudores });
   } catch (error) { next(error); }
 };
 

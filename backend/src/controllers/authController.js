@@ -64,8 +64,13 @@ exports.updateProfile = async (req, res, next) => {
 // GET /api/auth/users (solo admin)
 exports.getUsers = async (req, res, next) => {
   try {
-    const { rol, page = 1, limit = 20 } = req.query;
-    const filter = rol ? { rol } : {};
+    const { rol, search, page = 1, limit = 20 } = req.query;
+    const filter = {};
+    if (rol) filter.rol = rol;
+    if (search) filter.$or = [
+      { nombre: { $regex: search, $options: 'i' } },
+      { email:  { $regex: search, $options: 'i' } },
+    ];
     const users = await User.find(filter)
       .skip((page - 1) * limit)
       .limit(parseInt(limit))

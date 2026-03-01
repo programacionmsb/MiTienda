@@ -32,6 +32,7 @@ const userSchema = new mongoose.Schema({
   direccion: { type: String, trim: true },
   puntos: { type: Number, default: 0 },          // Fidelización
   totalCompras: { type: Number, default: 0 },
+  deuda: { type: Number, default: 0 },           // Crédito pendiente de pago
 }, {
   timestamps: true,
 });

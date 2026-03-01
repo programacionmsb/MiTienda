@@ -49,6 +49,8 @@ export const salesAPI = {
   getAll: (params) => api.get('/sales', { params }),
   create: (data) => api.post('/sales', data),
   getResumen: () => api.get('/sales/resumen'),
+  getDeudores: () => api.get('/sales/deudores'),
+  cobro: (data) => api.post('/sales/cobro', data),
 };
 
 // ─── Orders ────────────────────────────────────────────────

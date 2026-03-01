@@ -16,7 +16,7 @@ const saleSchema = new mongoose.Schema({
   total: { type: Number, required: true },
   metodoPago: {
     type: String,
-    enum: ['efectivo', 'yape', 'plin', 'transferencia', 'tarjeta'],
+    enum: ['efectivo', 'yape', 'plin', 'transferencia', 'tarjeta', 'credito'],
     required: true,
   },
   montoPagado: Number,        // Para calcular vuelto en efectivo
