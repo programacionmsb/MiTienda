@@ -232,7 +232,7 @@ function CobroRapidoModal({ onClose }) {
                       { label: `50% (${S(selected.deuda / 2)})`, value: (selected.deuda / 2).toFixed(2) },
                     ].map(({ label, value }) => (
                       <button key={label} onClick={() => setMonto(value)}
-                        style={{ background: '#211f1c', border: '1px solid #2e2b27', borderRadius: 7, padding: '0.28rem 0.7rem', cursor: 'pointer', color: '#8a8680', fontSize: '0.75rem', fontFamily: "'DM Sans', sans-serif' " }}>
+                        style={{ background: '#211f1c', border: '1px solid #2e2b27', borderRadius: 7, padding: '0.28rem 0.7rem', cursor: 'pointer', color: '#8a8680', fontSize: '0.75rem', fontFamily: "'DM Sans', sans-serif" }}>
                         {label}
                       </button>
                     ))}
@@ -362,6 +362,7 @@ function Caja({ onSaleCreated, isMobile }) {
   };
 
   return (
+    <>
     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 320px', gap: '1rem', alignItems: 'start' }}>
 
       {/* Columna izquierda: buscador + carrito */}
@@ -556,6 +557,7 @@ function Caja({ onSaleCreated, isMobile }) {
     </div>
 
     {showCobro && <CobroRapidoModal onClose={() => setShowCobro(false)} />}
+    </>
   );
 }
 
