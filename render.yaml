@@ -1,0 +1,36 @@
+services:
+  # ── Backend (Web Service) ─────────────────────────────────
+  - type: web
+    name: mitienda-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node src/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      # Completar en el dashboard de Render:
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false   # URL del frontend en Render (ej: https://mitienda-frontend.onrender.com)
+
+  # ── Frontend (Static Site) ────────────────────────────────
+  - type: web
+    name: mitienda-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: build
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # Completar en el dashboard de Render:
+      - key: REACT_APP_API_URL
+        sync: false   # URL del backend en Render (ej: https://mitienda-backend.onrender.com/api)

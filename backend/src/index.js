@@ -23,8 +23,18 @@ connectDB();
 
 // Seguridad
 app.use(helmet());
+const allowedOrigins = [
+  'http://localhost:3000',
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: (origin, cb) => {
+    // Permitir requests sin origin (Postman, curl, mobile)
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    cb(new Error(`CORS: origen no permitido → ${origin}`));
+  },
   credentials: true,
 }));
 
