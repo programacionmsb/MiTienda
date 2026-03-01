@@ -7,7 +7,7 @@ exports.getProducts = async (req, res, next) => {
     const filter = { activo: activo === 'true' };
     if (categoria) filter.categoria = categoria;
     if (stockBajo === 'true') filter.$expr = { $lte: ['$stock', '$stockMinimo'] };
-    if (search) filter.$text = { $search: search };
+    if (search) filter.nombre = { $regex: search, $options: 'i' };
 
     const products = await Product.find(filter)
       .skip((page - 1) * limit)
