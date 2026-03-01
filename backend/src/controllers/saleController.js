@@ -67,7 +67,7 @@ exports.createSale = async (req, res, next) => {
 // GET /api/sales
 exports.getSales = async (req, res, next) => {
   try {
-    const { desde, hasta, metodoPago, page = 1, limit = 30 } = req.query;
+    const { desde, hasta, metodoPago, clienteId, page = 1, limit = 30 } = req.query;
     const filter = {};
     if (desde || hasta) {
       filter.createdAt = {};
@@ -75,6 +75,7 @@ exports.getSales = async (req, res, next) => {
       if (hasta) filter.createdAt.$lte = new Date(hasta + 'T23:59:59');
     }
     if (metodoPago) filter.metodoPago = metodoPago;
+    if (clienteId) filter.cliente = clienteId;
 
     const sales = await Sale.find(filter)
       .populate('cajero', 'nombre')

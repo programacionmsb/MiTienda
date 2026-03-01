@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const { validationResult } = require('express-validator');
 const User = require('../models/User');
 
@@ -76,13 +77,18 @@ exports.createUser = async (req, res, next) => {
 // PATCH /api/auth/users/:id  — Admin edita cualquier usuario
 exports.updateUser = async (req, res, next) => {
   try {
-    const { nombre, telefono, direccion, puntos, activo } = req.body;
+    const { nombre, email, telefono, direccion, puntos, activo, password } = req.body;
     const update = {};
     if (nombre    !== undefined) update.nombre    = nombre;
+    if (email     !== undefined) update.email     = email;
     if (telefono  !== undefined) update.telefono  = telefono;
     if (direccion !== undefined) update.direccion = direccion;
     if (puntos    !== undefined) update.puntos    = puntos;
     if (activo    !== undefined) update.activo    = activo;
+    // Hash password manually (findByIdAndUpdate bypasses pre-save hook)
+    if (password && password.length >= 6) {
+      update.password = await bcrypt.hash(password, 12);
+    }
     const user = await User.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true });
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
     res.json({ success: true, data: user });

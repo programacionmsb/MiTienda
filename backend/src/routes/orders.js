@@ -8,10 +8,14 @@ const User = require('../models/User');
 // GET /api/orders
 router.get('/', protect, async (req, res, next) => {
   try {
-    const { estado, page = 1, limit = 20 } = req.query;
-    const filter = req.user.rol === 'cliente'
-      ? { cliente: req.user._id }
-      : estado ? { estado } : {};
+    const { estado, clienteId, page = 1, limit = 20 } = req.query;
+    let filter = {};
+    if (req.user.rol === 'cliente') {
+      filter.cliente = req.user._id;
+    } else {
+      if (estado) filter.estado = estado;
+      if (clienteId) filter.cliente = clienteId;
+    }
 
     const orders = await Order.find(filter)
       .populate('cliente', 'nombre telefono')
