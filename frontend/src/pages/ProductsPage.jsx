@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Search, Edit2, Trash2, X, Package } from 'lucide-react';
 import { productsAPI } from '../services/api';
 import useAuthStore from '../store/authStore';
+import useIsMobile from '../hooks/useIsMobile';
 import toast from 'react-hot-toast';
 
 const CATEGORIAS = ['bebidas', 'golosinas', 'abarrotes', 'panaderia', 'limpieza', 'otros'];
@@ -27,7 +28,6 @@ const badgeColor = (estado) => ({
   agotado: { bg: '#e85d3a20', color: '#e85d3a' },
 }[estado] || { bg: '#2e2b27', color: '#8a8680' });
 
-// ── Modal crear / editar ────────────────────────────────────────────────────
 function ProductModal({ product, onClose, onSaved }) {
   const [form, setForm] = useState(product ? { ...product } : { ...EMPTY });
   const [saving, setSaving] = useState(false);
@@ -70,10 +70,10 @@ function ProductModal({ product, onClose, onSaved }) {
       <div style={{
         background: '#1a1916', border: '1px solid #2e2b27', borderRadius: 20,
         width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto',
-        padding: '1.75rem',
+        padding: '1.5rem',
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: '1.25rem', color: '#f0ede8', margin: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+          <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: '1.15rem', color: '#f0ede8', margin: 0 }}>
             {isEdit ? 'Editar producto' : 'Nuevo producto'}
           </h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8a8680', padding: 4 }}>
@@ -82,8 +82,7 @@ function ProductModal({ product, onClose, onSaved }) {
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* Fila 1: emoji + nombre */}
-          <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '0.75rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr', gap: '0.75rem' }}>
             <div>
               <label style={label}>Emoji</label>
               <input value={form.emoji} onChange={e => set('emoji', e.target.value)}
@@ -96,7 +95,6 @@ function ProductModal({ product, onClose, onSaved }) {
             </div>
           </div>
 
-          {/* Fila 2: categoría + unidad */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <div>
               <label style={label}>Categoría *</label>
@@ -114,7 +112,6 @@ function ProductModal({ product, onClose, onSaved }) {
             </div>
           </div>
 
-          {/* Fila 3: precio + costo */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <div>
               <label style={label}>Precio venta (S/) *</label>
@@ -128,7 +125,6 @@ function ProductModal({ product, onClose, onSaved }) {
             </div>
           </div>
 
-          {/* Fila 4: stock + stock mínimo */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <div>
               <label style={label}>Stock inicial *</label>
@@ -136,20 +132,18 @@ function ProductModal({ product, onClose, onSaved }) {
                 onChange={e => set('stock', e.target.value)} required placeholder="0" style={input} />
             </div>
             <div>
-              <label style={label}>Stock mínimo (alerta)</label>
+              <label style={label}>Stock mínimo</label>
               <input type="number" min="0" step="1" value={form.stockMinimo}
                 onChange={e => set('stockMinimo', e.target.value)} style={input} />
             </div>
           </div>
 
-          {/* Código de barras */}
           <div>
             <label style={label}>Código de barras</label>
             <input value={form.codigoBarras} onChange={e => set('codigoBarras', e.target.value)}
               placeholder="Opcional" style={input} />
           </div>
 
-          {/* Descripción */}
           <div>
             <label style={label}>Descripción</label>
             <textarea value={form.descripcion} onChange={e => set('descripcion', e.target.value)}
@@ -157,15 +151,13 @@ function ProductModal({ product, onClose, onSaved }) {
               style={{ ...input, resize: 'vertical', lineHeight: 1.5 }} />
           </div>
 
-          {/* Destacado */}
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontSize: '0.9rem', color: '#f0ede8' }}>
             <input type="checkbox" checked={form.destacado} onChange={e => set('destacado', e.target.checked)}
               style={{ width: 16, height: 16, accentColor: '#f5a623' }} />
             Producto destacado (aparece en tienda)
           </label>
 
-          {/* Botones */}
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
             <button type="button" onClick={onClose} style={{
               flex: 1, background: '#211f1c', border: '1px solid #2e2b27', borderRadius: 10,
               padding: '0.75rem', color: '#8a8680', cursor: 'pointer',
@@ -185,22 +177,22 @@ function ProductModal({ product, onClose, onSaved }) {
   );
 }
 
-// ── Página principal ────────────────────────────────────────────────────────
 export default function ProductsPage() {
   const { user } = useAuthStore();
   const isAdmin = user?.rol === 'admin';
+  const isMobile = useIsMobile();
 
   const [products, setProducts]   = useState([]);
   const [loading, setLoading]     = useState(true);
   const [search, setSearch]       = useState('');
   const [catFilter, setCatFilter] = useState('');
-  const [modal, setModal]         = useState(null); // null | 'new' | product_obj
+  const [modal, setModal]         = useState(null);
 
   const load = async () => {
     setLoading(true);
     try {
       const params = {};
-      if (search)    params.search   = search;
+      if (search)    params.search    = search;
       if (catFilter) params.categoria = catFilter;
       const res = await productsAPI.getAll(params);
       setProducts(res.data.data);
@@ -225,11 +217,11 @@ export default function ProductsPage() {
   };
 
   return (
-    <div style={{ padding: '2rem', color: '#f0ede8', fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ padding: isMobile ? '1rem' : '2rem', color: '#f0ede8', fontFamily: "'DM Sans', sans-serif" }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: '1.8rem', margin: 0 }}>Productos</h1>
+          <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: isMobile ? '1.5rem' : '1.8rem', margin: 0 }}>Productos</h1>
           <p style={{ color: '#8a8680', marginTop: '0.25rem', fontSize: '0.9rem' }}>
             {products.length} producto{products.length !== 1 ? 's' : ''}
           </p>
@@ -238,27 +230,24 @@ export default function ProductsPage() {
           <button onClick={() => setModal('new')} style={{
             display: 'flex', alignItems: 'center', gap: '0.5rem',
             background: '#f5a623', border: 'none', borderRadius: 12,
-            padding: '0.7rem 1.25rem', color: '#0f0e0c', fontWeight: 700,
-            cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: '0.95rem',
+            padding: '0.65rem 1.1rem', color: '#0f0e0c', fontWeight: 700,
+            cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: '0.9rem',
           }}>
-            <Plus size={18} /> Nuevo producto
+            <Plus size={16} /> Nuevo
           </button>
         )}
       </div>
 
       {/* Filtros */}
-      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        <div style={{ position: 'relative', flex: '1 1 220px' }}>
-          <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#8a8680' }} />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
+      <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', flex: '1 1 180px' }}>
+          <Search size={14} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#8a8680' }} />
+          <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Buscar productos..."
-            style={{ ...input, paddingLeft: '2.2rem' }}
-          />
+            style={{ ...input, paddingLeft: '2.1rem' }} />
         </div>
         <select value={catFilter} onChange={e => setCatFilter(e.target.value)}
-          style={{ ...input, width: 'auto', cursor: 'pointer', flex: '0 0 160px' }}>
+          style={{ ...input, width: 'auto', cursor: 'pointer', flex: '0 0 150px' }}>
           <option value="">Todas las categorías</option>
           {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
@@ -273,87 +262,102 @@ export default function ProductsPage() {
             <Package size={40} style={{ marginBottom: '0.75rem', opacity: 0.3 }} />
             <div>No hay productos</div>
           </div>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #2e2b27' }}>
-                {['Producto', 'Categoría', 'Precio', 'Costo', 'Stock', 'Estado', isAdmin ? 'Acciones' : ''].map(h => h && (
-                  <th key={h} style={{
-                    padding: '0.9rem 1rem', textAlign: 'left', fontSize: '0.75rem',
-                    color: '#8a8680', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600,
-                  }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((p, i) => {
-                const estado = p.estadoStock || (p.stock === 0 ? 'agotado' : p.stock <= p.stockMinimo ? 'bajo' : 'ok');
-                const bc = badgeColor(estado);
-                return (
-                  <tr key={p._id} style={{
-                    borderBottom: i < products.length - 1 ? '1px solid #2e2b27' : 'none',
-                    transition: 'background 0.15s',
-                  }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#211f1c'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <td style={{ padding: '0.85rem 1rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                        <span style={{ fontSize: '1.3rem' }}>{p.emoji}</span>
-                        <div>
-                          <div style={{ fontWeight: 500, fontSize: '0.92rem' }}>{p.nombre}</div>
-                          {p.codigoBarras && <div style={{ fontSize: '0.72rem', color: '#8a8680' }}>{p.codigoBarras}</div>}
-                        </div>
+        ) : isMobile ? (
+          /* Vista tarjetas en mobile */
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {products.map((p, i) => {
+              const estado = p.estadoStock || (p.stock === 0 ? 'agotado' : p.stock <= p.stockMinimo ? 'bajo' : 'ok');
+              const bc = badgeColor(estado);
+              return (
+                <div key={p._id} style={{ padding: '0.9rem 1rem', borderBottom: i < products.length - 1 ? '1px solid #2e2b27' : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: '1.4rem' }}>{p.emoji}</span>
+                      <div style={{ overflow: 'hidden' }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nombre}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#8a8680' }}>{p.categoria}</div>
                       </div>
-                    </td>
-                    <td style={{ padding: '0.85rem 1rem' }}>
-                      <span style={{
-                        background: '#211f1c', border: '1px solid #2e2b27', borderRadius: 6,
-                        padding: '0.2rem 0.55rem', fontSize: '0.78rem', color: '#8a8680',
-                      }}>{p.categoria}</span>
-                    </td>
-                    <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#f5a623' }}>
-                      S/ {parseFloat(p.precio).toFixed(2)}
-                    </td>
-                    <td style={{ padding: '0.85rem 1rem', color: '#8a8680', fontSize: '0.88rem' }}>
-                      {p.costo ? `S/ ${parseFloat(p.costo).toFixed(2)}` : '—'}
-                    </td>
-                    <td style={{ padding: '0.85rem 1rem', fontWeight: 600 }}>{p.stock}</td>
-                    <td style={{ padding: '0.85rem 1rem' }}>
-                      <span style={{
-                        background: bc.bg, color: bc.color, borderRadius: 6,
-                        padding: '0.2rem 0.6rem', fontSize: '0.78rem', fontWeight: 600,
-                      }}>
-                        {estado}
-                      </span>
-                    </td>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.3rem', flexShrink: 0 }}>
+                      <span style={{ color: '#f5a623', fontWeight: 700, fontFamily: "'Syne', sans-serif" }}>S/ {parseFloat(p.precio).toFixed(2)}</span>
+                      <span style={{ background: bc.bg, color: bc.color, borderRadius: 5, padding: '0.15rem 0.45rem', fontSize: '0.72rem', fontWeight: 600 }}>{estado}</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                    <span style={{ fontSize: '0.82rem', color: '#8a8680' }}>Stock: <strong style={{ color: '#f0ede8' }}>{p.stock}</strong></span>
                     {isAdmin && (
+                      <div style={{ display: 'flex', gap: '0.4rem' }}>
+                        <button onClick={() => setModal(p)} style={{ background: '#211f1c', border: '1px solid #2e2b27', borderRadius: 8, padding: '0.35rem 0.55rem', cursor: 'pointer', color: '#f0ede8' }}>
+                          <Edit2 size={13} />
+                        </button>
+                        <button onClick={() => handleDelete(p)} style={{ background: '#211f1c', border: '1px solid #2e2b27', borderRadius: 8, padding: '0.35rem 0.55rem', cursor: 'pointer', color: '#e85d3a' }}>
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* Vista tabla en desktop */
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #2e2b27' }}>
+                  {['Producto', 'Categoría', 'Precio', 'Costo', 'Stock', 'Estado', isAdmin ? 'Acciones' : ''].map(h => h && (
+                    <th key={h} style={{
+                      padding: '0.9rem 1rem', textAlign: 'left', fontSize: '0.75rem',
+                      color: '#8a8680', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600,
+                    }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {products.map((p, i) => {
+                  const estado = p.estadoStock || (p.stock === 0 ? 'agotado' : p.stock <= p.stockMinimo ? 'bajo' : 'ok');
+                  const bc = badgeColor(estado);
+                  return (
+                    <tr key={p._id} style={{ borderBottom: i < products.length - 1 ? '1px solid #2e2b27' : 'none', transition: 'background 0.15s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#211f1c'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
                       <td style={{ padding: '0.85rem 1rem' }}>
-                        <div style={{ display: 'flex', gap: '0.4rem' }}>
-                          <button onClick={() => setModal(p)} style={{
-                            background: '#211f1c', border: '1px solid #2e2b27', borderRadius: 8,
-                            padding: '0.4rem 0.6rem', cursor: 'pointer', color: '#f0ede8',
-                          }} title="Editar">
-                            <Edit2 size={14} />
-                          </button>
-                          <button onClick={() => handleDelete(p)} style={{
-                            background: '#211f1c', border: '1px solid #2e2b27', borderRadius: 8,
-                            padding: '0.4rem 0.6rem', cursor: 'pointer', color: '#e85d3a',
-                          }} title="Desactivar">
-                            <Trash2 size={14} />
-                          </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <span style={{ fontSize: '1.3rem' }}>{p.emoji}</span>
+                          <div>
+                            <div style={{ fontWeight: 500, fontSize: '0.92rem' }}>{p.nombre}</div>
+                            {p.codigoBarras && <div style={{ fontSize: '0.72rem', color: '#8a8680' }}>{p.codigoBarras}</div>}
+                          </div>
                         </div>
                       </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <span style={{ background: '#211f1c', border: '1px solid #2e2b27', borderRadius: 6, padding: '0.2rem 0.55rem', fontSize: '0.78rem', color: '#8a8680' }}>{p.categoria}</span>
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#f5a623' }}>S/ {parseFloat(p.precio).toFixed(2)}</td>
+                      <td style={{ padding: '0.85rem 1rem', color: '#8a8680', fontSize: '0.88rem' }}>{p.costo ? `S/ ${parseFloat(p.costo).toFixed(2)}` : '—'}</td>
+                      <td style={{ padding: '0.85rem 1rem', fontWeight: 600 }}>{p.stock}</td>
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <span style={{ background: bc.bg, color: bc.color, borderRadius: 6, padding: '0.2rem 0.6rem', fontSize: '0.78rem', fontWeight: 600 }}>{estado}</span>
+                      </td>
+                      {isAdmin && (
+                        <td style={{ padding: '0.85rem 1rem' }}>
+                          <div style={{ display: 'flex', gap: '0.4rem' }}>
+                            <button onClick={() => setModal(p)} style={{ background: '#211f1c', border: '1px solid #2e2b27', borderRadius: 8, padding: '0.4rem 0.6rem', cursor: 'pointer', color: '#f0ede8' }}><Edit2 size={14} /></button>
+                            <button onClick={() => handleDelete(p)} style={{ background: '#211f1c', border: '1px solid #2e2b27', borderRadius: 8, padding: '0.4rem 0.6rem', cursor: 'pointer', color: '#e85d3a' }}><Trash2 size={14} /></button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
-      {/* Modal */}
       {modal && (
         <ProductModal
           product={modal === 'new' ? null : modal}

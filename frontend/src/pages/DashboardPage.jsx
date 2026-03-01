@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { TrendingUp, TrendingDown, ShoppingCart, Package, Users, AlertTriangle } from 'lucide-react';
 import { dashboardAPI } from '../services/api';
+import useIsMobile from '../hooks/useIsMobile';
 import toast from 'react-hot-toast';
 
 const S = (v) => `S/ ${(v || 0).toFixed(2)}`;
@@ -41,6 +42,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 export default function DashboardPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     dashboardAPI.get()
@@ -54,39 +56,38 @@ export default function DashboardPage() {
 
   const { ventasHoy, crecimientoHoy, ventasSemana, ventasMes, pedidosPendientes, productosStockBajo, totalClientes, topProductos } = data;
 
-  // Simulamos horas si no vienen del servidor
   const horasData = Array.from({ length: 13 }, (_, i) => ({
     hora: i + 7,
     total: Math.random() * 80 + 10,
   }));
 
   return (
-    <div style={{ padding: '2rem', color: '#f0ede8' }}>
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: '1.8rem' }}>Dashboard</h1>
+    <div style={{ padding: isMobile ? '1rem' : '2rem', color: '#f0ede8' }}>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: isMobile ? '1.5rem' : '1.8rem' }}>Dashboard</h1>
         <p style={{ color: '#8a8680', marginTop: '0.25rem' }}>
           {new Date().toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         </p>
       </div>
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${isMobile ? '140px' : '210px'}, 1fr))`, gap: '0.75rem', marginBottom: '1.5rem' }}>
         <StatCard label="Ventas hoy" value={S(ventasHoy?.total)} change={parseFloat(crecimientoHoy)} icon={TrendingUp} />
-        <StatCard label="Tickets hoy" value={ventasHoy?.count || 0} icon={ShoppingCart} color="#3ecf8e" sub={`Promedio: ${S((ventasHoy?.total || 0) / (ventasHoy?.count || 1))}`} />
+        <StatCard label="Tickets hoy" value={ventasHoy?.count || 0} icon={ShoppingCart} color="#3ecf8e" sub={`Prom: ${S((ventasHoy?.total || 0) / (ventasHoy?.count || 1))}`} />
         <StatCard label="Esta semana" value={S(ventasSemana)} icon={TrendingUp} color="#6495ED" />
         <StatCard label="Este mes" value={S(ventasMes)} icon={TrendingUp} color="#f5a623" />
-        <StatCard label="Pedidos pendientes" value={pedidosPendientes} icon={ShoppingCart} color={pedidosPendientes > 0 ? '#f5a623' : '#3ecf8e'} />
-        <StatCard label="Stock bajo" value={productosStockBajo} icon={AlertTriangle} color="#e85d3a" sub="Productos a reponer" />
+        <StatCard label="Pedidos pend." value={pedidosPendientes} icon={ShoppingCart} color={pedidosPendientes > 0 ? '#f5a623' : '#3ecf8e'} />
+        <StatCard label="Stock bajo" value={productosStockBajo} icon={AlertTriangle} color="#e85d3a" sub="A reponer" />
         <StatCard label="Clientes" value={totalClientes} icon={Users} color="#9b59b6" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 340px', gap: '1rem' }}>
         {/* Gráfica ventas por hora */}
         <div style={{ background: '#1a1916', border: '1px solid #2e2b27', borderRadius: 16, padding: '1.5rem' }}>
-          <h3 style={{ fontFamily: "'Syne', sans-serif", marginBottom: '1.5rem' }}>Ventas por hora (hoy)</h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={horasData} barSize={20}>
-              <XAxis dataKey="hora" tick={{ fill: '#8a8680', fontSize: 11 }} tickFormatter={h => `${h}h`} axisLine={false} tickLine={false} />
+          <h3 style={{ fontFamily: "'Syne', sans-serif", marginBottom: '1.5rem', fontSize: '0.95rem' }}>Ventas por hora (hoy)</h3>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={horasData} barSize={16}>
+              <XAxis dataKey="hora" tick={{ fill: '#8a8680', fontSize: 10 }} tickFormatter={h => `${h}h`} axisLine={false} tickLine={false} />
               <YAxis hide />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(245,166,35,0.06)' }} />
               <Bar dataKey="total" radius={[6,6,0,0]}>
@@ -100,7 +101,7 @@ export default function DashboardPage() {
 
         {/* Top productos */}
         <div style={{ background: '#1a1916', border: '1px solid #2e2b27', borderRadius: 16, padding: '1.5rem' }}>
-          <h3 style={{ fontFamily: "'Syne', sans-serif", marginBottom: '1.25rem' }}>🏆 Top productos (mes)</h3>
+          <h3 style={{ fontFamily: "'Syne', sans-serif", marginBottom: '1.25rem', fontSize: '0.95rem' }}>🏆 Top productos (mes)</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {(topProductos || []).map((p, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

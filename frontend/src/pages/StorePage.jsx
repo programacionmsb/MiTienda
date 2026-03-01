@@ -3,6 +3,7 @@ import { ShoppingCart, Plus, Minus, X, Search, LogIn, ChevronRight, CheckCircle 
 import { Link, useNavigate } from 'react-router-dom';
 import { productsAPI, ordersAPI } from '../services/api';
 import useAuthStore from '../store/authStore';
+import useIsMobile from '../hooks/useIsMobile';
 import toast from 'react-hot-toast';
 
 const CATEGORIAS = ['bebidas', 'golosinas', 'abarrotes', 'panaderia', 'limpieza', 'otros'];
@@ -345,6 +346,7 @@ function CartDrawer({ cart, onClose, onUpdateQty, onRemove, onOrderPlaced }) {
 // ── Página principal ───────────────────────────────────────────────────────
 export default function StorePage() {
   const { user, token } = useAuthStore();
+  const isMobile = useIsMobile();
   const [products, setProducts]   = useState([]);
   const [loading, setLoading]     = useState(true);
   const [search, setSearch]       = useState('');
@@ -396,66 +398,56 @@ export default function StorePage() {
       <header style={{
         position: 'sticky', top: 0, zIndex: 50,
         background: 'rgba(15,14,12,0.92)', backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid #2e2b27', padding: '0 2rem',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        height: 64, gap: '1rem',
+        borderBottom: '1px solid #2e2b27', padding: isMobile ? '0.6rem 1rem' : '0 2rem',
+        display: 'flex', flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'stretch' : 'center',
+        justifyContent: 'space-between',
+        gap: '0.5rem',
       }}>
-        <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '1.4rem', flexShrink: 0 }}>
-          Mi<span style={{ color: '#f5a623' }}>Tienda</span>
+        {/* Fila 1 en mobile: logo + acciones */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: isMobile ? 'auto' : 64 }}>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '1.3rem', flexShrink: 0 }}>
+            Mi<span style={{ color: '#f5a623' }}>Tienda</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {user ? (
+              <>
+                {(user.rol === 'admin' || user.rol === 'empleado') && !isMobile && (
+                  <Link to="/dashboard" style={{ color: '#8a8680', textDecoration: 'none', fontSize: '0.82rem', padding: '0.4rem 0.75rem', border: '1px solid #2e2b27', borderRadius: 8 }}>Panel</Link>
+                )}
+                <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#f5a623', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 700, color: '#0f0e0c' }}>
+                  {user.nombre?.[0]?.toUpperCase()}
+                </div>
+              </>
+            ) : (
+              <Link to="/login" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#8a8680', textDecoration: 'none', fontSize: '0.82rem', padding: '0.35rem 0.7rem', border: '1px solid #2e2b27', borderRadius: 8 }}>
+                <LogIn size={13} /> {!isMobile && 'Iniciar sesión'}
+              </Link>
+            )}
+            <button onClick={() => setCartOpen(true)} style={{
+              background: totalItems > 0 ? '#f5a623' : '#1a1916',
+              border: `1px solid ${totalItems > 0 ? '#f5a623' : '#2e2b27'}`,
+              borderRadius: 10, padding: '0.4rem 0.75rem',
+              display: 'flex', alignItems: 'center', gap: '0.4rem',
+              color: totalItems > 0 ? '#0f0e0c' : '#8a8680', cursor: 'pointer',
+              fontFamily: "'DM Sans', sans-serif", fontSize: '0.85rem', fontWeight: totalItems > 0 ? 700 : 400,
+            }}>
+              <ShoppingCart size={15} />
+              {totalItems > 0 ? totalItems : (!isMobile ? 'Carrito' : '')}
+            </button>
+          </div>
         </div>
 
-        {/* Búsqueda central */}
-        <div style={{ position: 'relative', flex: 1, maxWidth: 400 }}>
-          <Search size={14} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#8a8680' }} />
+        {/* Búsqueda */}
+        <div style={{ position: 'relative', flex: isMobile ? 'none' : 1, maxWidth: isMobile ? '100%' : 400, paddingBottom: isMobile ? '0.4rem' : 0 }}>
+          <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#8a8680' }} />
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Buscar productos..."
-            style={{ ...inputStyle, paddingLeft: '2rem', padding: '0.5rem 0.85rem 0.5rem 2rem' }} />
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-          {user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              {(user.rol === 'admin' || user.rol === 'empleado') && (
-                <Link to="/dashboard" style={{
-                  color: '#8a8680', textDecoration: 'none', fontSize: '0.82rem',
-                  padding: '0.4rem 0.75rem', border: '1px solid #2e2b27', borderRadius: 8,
-                }}>Panel</Link>
-              )}
-              <div style={{
-                width: 32, height: 32, borderRadius: '50%', background: '#f5a623',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '0.85rem', fontWeight: 700, color: '#0f0e0c',
-              }}>
-                {user.nombre?.[0]?.toUpperCase()}
-              </div>
-            </div>
-          ) : (
-            <Link to="/login" style={{
-              display: 'flex', alignItems: 'center', gap: '0.4rem',
-              color: '#8a8680', textDecoration: 'none', fontSize: '0.85rem',
-              padding: '0.4rem 0.85rem', border: '1px solid #2e2b27', borderRadius: 8,
-            }}>
-              <LogIn size={14} /> Iniciar sesión
-            </Link>
-          )}
-
-          {/* Botón carrito */}
-          <button onClick={() => setCartOpen(true)} style={{
-            position: 'relative', background: totalItems > 0 ? '#f5a623' : '#1a1916',
-            border: `1px solid ${totalItems > 0 ? '#f5a623' : '#2e2b27'}`,
-            borderRadius: 10, padding: '0.45rem 0.85rem',
-            display: 'flex', alignItems: 'center', gap: '0.5rem',
-            color: totalItems > 0 ? '#0f0e0c' : '#8a8680', cursor: 'pointer',
-            fontFamily: "'DM Sans', sans-serif", fontSize: '0.88rem', fontWeight: totalItems > 0 ? 700 : 400,
-            transition: 'all 0.15s',
-          }}>
-            <ShoppingCart size={16} />
-            {totalItems > 0 ? totalItems : 'Carrito'}
-          </button>
+            style={{ ...inputStyle, paddingLeft: '1.9rem', padding: '0.45rem 0.8rem 0.45rem 1.9rem' }} />
         </div>
       </header>
 
-      <main style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem' }}>
+      <main style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '1rem' : '2rem' }}>
 
         {/* Filtros categoría */}
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', flexWrap: 'wrap' }}>

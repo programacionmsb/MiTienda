@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Search, Plus, Minus, Trash2, ShoppingCart, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { salesAPI, productsAPI, authAPI } from '../services/api';
+import useIsMobile from '../hooks/useIsMobile';
 import toast from 'react-hot-toast';
 
 const METODOS = ['efectivo', 'yape', 'plin', 'transferencia', 'tarjeta', 'credito'];
@@ -114,7 +115,7 @@ function ClienteSelector({ value, onChange }) {
 }
 
 // ── POS / Caja ─────────────────────────────────────────────────────────────
-function Caja({ onSaleCreated }) {
+function Caja({ onSaleCreated, isMobile }) {
   const [search, setSearch]         = useState('');
   const [products, setProducts]     = useState([]);
   const [cart, setCart]             = useState([]);
@@ -197,7 +198,7 @@ function Caja({ onSaleCreated }) {
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '1rem', alignItems: 'start' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 320px', gap: '1rem', alignItems: 'start' }}>
 
       {/* Columna izquierda: buscador + carrito */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -626,6 +627,7 @@ function Creditos() {
 export default function SalesPage() {
   const [tab, setTab] = useState('caja');
   const [historialKey, setHistorialKey] = useState(0);
+  const isMobile = useIsMobile();
 
   const onSaleCreated = () => {
     if (tab === 'historial') setHistorialKey(k => k + 1);
@@ -643,9 +645,9 @@ export default function SalesPage() {
   );
 
   return (
-    <div style={{ padding: '2rem', color: '#f0ede8', fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: '1.8rem', margin: 0 }}>Ventas</h1>
+    <div style={{ padding: isMobile ? '1rem' : '2rem', color: '#f0ede8', fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ marginBottom: '1.25rem' }}>
+        <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: isMobile ? '1.5rem' : '1.8rem', margin: 0 }}>Ventas</h1>
         <p style={{ color: '#8a8680', marginTop: '0.25rem', fontSize: '0.9rem' }}>Caja y registro de ventas</p>
       </div>
 
@@ -658,7 +660,7 @@ export default function SalesPage() {
         {tabBtn('creditos', '📒 Créditos')}
       </div>
 
-      {tab === 'caja' && <Caja onSaleCreated={onSaleCreated} />}
+      {tab === 'caja' && <Caja onSaleCreated={onSaleCreated} isMobile={isMobile} />}
       {tab === 'historial' && <Historial key={historialKey} />}
       {tab === 'creditos' && <Creditos />}
     </div>
