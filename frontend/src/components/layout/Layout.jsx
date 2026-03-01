@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, Boxes, Receipt, ShoppingCart, FileBarChart, LogOut, Store } from 'lucide-react';
+import { LayoutDashboard, Package, Boxes, Receipt, ShoppingCart, FileBarChart, LogOut, Store, Users } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import useIsMobile from '../../hooks/useIsMobile';
 import toast from 'react-hot-toast';
@@ -11,6 +11,7 @@ const navItems = [
   { to: '/ventas',     icon: Receipt,         label: 'Ventas',     roles: ['admin','empleado'] },
   { to: '/pedidos',    icon: ShoppingCart,    label: 'Pedidos',    roles: ['admin','empleado','cliente'] },
   { to: '/reportes',   icon: FileBarChart,    label: 'Reportes',   roles: ['admin'] },
+  { to: '/clientes',   icon: Users,           label: 'Clientes',   roles: ['admin','empleado'] },
   { to: '/tienda',     icon: Store,           label: 'Tienda',     roles: ['admin','empleado','cliente'] },
 ];
 

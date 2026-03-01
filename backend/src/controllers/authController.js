@@ -61,7 +61,35 @@ exports.updateProfile = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-// GET /api/auth/users (solo admin)
+// POST /api/auth/users  — Admin crea cliente manualmente
+exports.createUser = async (req, res, next) => {
+  try {
+    const { nombre, email, password, telefono, direccion, rol = 'cliente' } = req.body;
+    if (!nombre || !email || !password) return res.status(400).json({ error: 'Nombre, email y contraseña son requeridos' });
+    const existente = await User.findOne({ email });
+    if (existente) return res.status(400).json({ error: 'Email ya registrado' });
+    const user = await User.create({ nombre, email, password, telefono, direccion, rol });
+    res.status(201).json({ success: true, data: user });
+  } catch (error) { next(error); }
+};
+
+// PATCH /api/auth/users/:id  — Admin edita cualquier usuario
+exports.updateUser = async (req, res, next) => {
+  try {
+    const { nombre, telefono, direccion, puntos, activo } = req.body;
+    const update = {};
+    if (nombre    !== undefined) update.nombre    = nombre;
+    if (telefono  !== undefined) update.telefono  = telefono;
+    if (direccion !== undefined) update.direccion = direccion;
+    if (puntos    !== undefined) update.puntos    = puntos;
+    if (activo    !== undefined) update.activo    = activo;
+    const user = await User.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true });
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    res.json({ success: true, data: user });
+  } catch (error) { next(error); }
+};
+
+// GET /api/auth/users (admin y empleado)
 exports.getUsers = async (req, res, next) => {
   try {
     const { rol, search, page = 1, limit = 20 } = req.query;

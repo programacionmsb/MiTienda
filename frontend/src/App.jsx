@@ -13,6 +13,7 @@ import OrdersPage from './pages/OrdersPage';
 import InventoryPage from './pages/InventoryPage';
 import StorePage from './pages/StorePage';
 import RegisterPage from './pages/RegisterPage';
+import ClientsPage from './pages/ClientsPage';
 import Layout from './components/layout/Layout';
 
 // Guard de rutas
@@ -72,6 +73,11 @@ export default function App() {
           <Route path="reportes" element={
             <PrivateRoute roles={['admin']}>
               <ReportsPage />
+            </PrivateRoute>
+          } />
+          <Route path="clientes" element={
+            <PrivateRoute roles={['admin','empleado']}>
+              <ClientsPage />
             </PrivateRoute>
           } />
         </Route>

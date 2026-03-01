@@ -31,6 +31,8 @@ export const authAPI = {
   getMe: () => api.get('/auth/me'),
   updateProfile: (data) => api.put('/auth/profile', data),
   getUsers: (params) => api.get('/auth/users', { params }),
+  createUser: (data) => api.post('/auth/users', data),
+  updateUser: (id, data) => api.patch(`/auth/users/${id}`, data),
 };
 
 // ─── Products ──────────────────────────────────────────────
