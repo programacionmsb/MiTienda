@@ -20,9 +20,8 @@ services:
         sync: false   # URL del frontend en Render (ej: https://mitienda-frontend.onrender.com)
 
   # ── Frontend (Static Site) ────────────────────────────────
-  - type: web
+  - type: static
     name: mitienda-frontend
-    runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: build
